@@ -71,7 +71,7 @@ namespace NeuronalNetwork
             averageCost
         }*/
 
-        public virtual List<LayerValues> GetGradients(double[] input, double[] expectedOutput, ActivationFunctions activation = ActivationFunctions.Relu, CostFunctions cost = CostFunctions.SquaredMean)
+        public virtual List<LayerValues> GetGradients(double[] input, double[] expectedOutput, ActivationFunctions activation = ActivationFunctions.Relu, CostFunctions cost = CostFunctions.SquaredMean, double dropoutRate = .4)
         {
             List<LayerValues> networkGradients = new List<LayerValues>();
             double[] networkOutput = ExecuteNetwork(input);
@@ -141,11 +141,15 @@ namespace NeuronalNetwork
                             );
 
                         //
-                        previousLayerActivationsGradients[weightIndex] += Gradients.ConnectedNeuronGradient(
-                            startingGradient,
-                            activationFunctionGradients[neuronIndex],
-                            layers[layerIndex].neurons[neuronIndex].weights[weightIndex]
-                            );
+
+                        if (new Random().NextDouble() < dropoutRate)
+                            previousLayerActivationsGradients[weightIndex] = 0;
+                        else
+                            previousLayerActivationsGradients[weightIndex] += Gradients.ConnectedNeuronGradient(
+                                startingGradient,
+                                activationFunctionGradients[neuronIndex],
+                                layers[layerIndex].neurons[neuronIndex].weights[weightIndex]
+                                );
 
                         networkGradients[layerIndex].neurons[neuronIndex].weights[weightIndex] = weightGradients[weightIndex];
                     }
