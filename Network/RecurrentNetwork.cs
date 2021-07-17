@@ -42,14 +42,15 @@ namespace NeuronalNetwork.Network
         /// <summary>
         /// Execute the network multiple times, only makes sense in recurrent networks
         /// </summary>
-        public double[] ExecuteNetwork(List<double[]> inputs, out List<double[]>[] neuronActivations)
+        public double[] ExecuteNetwork(List<double[]> inputs, out NetworkValues neuronActivations)
         {
-            neuronActivations = new List<double[]>[inputs.Count];
+            List<double[]>[] unparsedNeuronActivations = new List<double[]>[inputs.Count];
 
             double[] output = ExecuteNetwork(inputs[0]);
 
             for (int i = 1; i < inputs.Count; i++)
-                output = ExecuteNetwork(inputs[i], out neuronActivations[i]);
+                output = ExecuteNetwork(inputs[i], out unparsedNeuronActivations[i]);
+            neuronActivations = new NetworkValues(unparsedNeuronActivations);
 
             if (IsRecurrent)
                 ResetHiddenStates();
@@ -60,7 +61,7 @@ namespace NeuronalNetwork.Network
         private void ResetHiddenStates()
         {
             for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
-                if (LayersType[layerIndex] == LayerTypes.Recurrent)
+                if (LayersType[layerIndex] != LayerTypes.FeedForward)
                     for (int neuronIndex = 0; neuronIndex < layers[layerIndex].length; neuronIndex++)
                         layers[layerIndex].neurons[neuronIndex].lastActivation = 0;
         }
@@ -70,5 +71,11 @@ namespace NeuronalNetwork.Network
             FeedForward,
             Recurrent,
         }
+
+        #region Training
+
+        
+
+        #endregion Training
     }
 }

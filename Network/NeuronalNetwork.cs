@@ -71,114 +71,130 @@ namespace NeuronalNetwork
             averageCost
         }*/
 
-        public virtual List<LayerValues> GetGradients(double[] input, double[] expectedOutput, ActivationFunctions activation = ActivationFunctions.Relu, CostFunctions cost = CostFunctions.SquaredMean, double dropoutRate = .4)
+        public NetworkValues GetGradients(double[] input, double[] expectedOutput, out double cost, ActivationFunctions activation = ActivationFunctions.Relu, CostFunctions costFunction = CostFunctions.SquaredMean, double dropoutRate = .4)
         {
-            List<LayerValues> networkGradients = new List<LayerValues>();
+            NetworkValues inversedNetworkGradients = new NetworkValues();
             double[] networkOutput = ExecuteNetwork(input);
 
-            double[] costGradients = new double[layers[layers.Count - 1].length];
-            double[] previousLayerActivationsGradients = new double[layers[layers.Count - 2].length];
-            double[] biasGradients = new double[layers.Count];
+            cost = Cost.GetCostOf(networkOutput, expectedOutput, costFunction);
+            double[] previousLayerActivationsGradients = new double[layers[layers.Count-1].length];
 
             //layers
             for (int layerIndex = layers.Count - 1; layerIndex <= 1; layerIndex--)
             {
-                int layerLenght = layers[layerIndex].length, previousLayerLenght = layers[layerIndex - 1].length;
+                if (layerIndex == layers.Count - 1)
+                    for (int neuronIndex = 0; neuronIndex < layers[layerIndex].length; neuronIndex++)
+                    //cost gradients or initial layer 
+                        previousLayerActivationsGradients[neuronIndex] = Derivatives.DerivativeOf(networkOutput[neuronIndex], expectedOutput[neuronIndex], costFunction);
 
-                double[] activationFunctionGradients = new double[layerLenght];
-                double[] weightGradients = new double[layerLenght * previousLayerLenght];
+                inversedNetworkGradients.values.Add(CalculateLayerGradients(previousLayerActivationsGradients, out previousLayerActivationsGradients, layerIndex, activation, dropoutRate));
+            }
 
-                //neurons
-                for (int neuronIndex = 0; neuronIndex < layerLenght; neuronIndex++)
+            NetworkValues Gradients = new NetworkValues();
+            for (int i = inversedNetworkGradients.values.Count - 1; i >= 0; i--)
+                Gradients.values.Add(inversedNetworkGradients.values[i]);
+
+            return Gradients;
+        }
+        
+        public LayerValues CalculateLayerGradients(double[] neuronActivationGradients, out double[] previousLayerActivationGradients, int layerIndex, ActivationFunctions activation = ActivationFunctions.Sigmoid, double dropoutRate = .4)
+        {
+            LayerValues output = new LayerValues();
+            int layerLenght = layers[layerIndex].length, previousLayerLenght = layers[layerIndex - 1].length;
+
+            double[] activationFunctionGradients = new double[layerLenght];
+            double[] weightGradients = new double[layerLenght * previousLayerLenght];
+            double[] biasGradients = new double[layers.Count];
+            previousLayerActivationGradients = new double[previousLayerLenght];
+
+            List<bool> previousLayerDropout = new List<bool>();
+            for (int i = 0; i < previousLayerLenght; i++)// Set dropout
+                if (new Random().NextDouble() < dropoutRate)
+                    previousLayerDropout.Add(true);
+                else
+                    previousLayerDropout.Add(false);
+
+
+            //neurons
+            for (int neuronIndex = 0; neuronIndex < layerLenght; neuronIndex++)
+            {
+
+                double currentNeuronGradient = neuronActivationGradients[neuronIndex];
+
+                //weights
+                for (int weightIndex = 0; weightIndex < previousLayerLenght; weightIndex++)
                 {
-                    if (layerIndex == layers.Count - 1)
-                        switch (cost)
-                        {
-                            case CostFunctions.SquaredMean:
-                                costGradients[neuronIndex] = Derivatives.SquaredMeanErrorDerivative(networkOutput[neuronIndex], expectedOutput[neuronIndex]);
-                                break;
+                    while (previousLayerDropout[weightIndex])
+                    //Skip dropped out Neurons
+                        weightIndex++;
 
-                            case CostFunctions.BinaryCrossEntropy:
-                                
-                                break;
 
-                            default:
-                                break;
-                        }
+                    double currentActivation = layers[layerIndex].neurons[neuronIndex].lastActivation;
 
-                    double startingGradient = layerIndex == layers.Count - 1 ? costGradients[neuronIndex] : previousLayerActivationsGradients[neuronIndex];
+                    //
+                    activationFunctionGradients[neuronIndex] = Derivatives.DerivativeOf(currentActivation, activation);
 
-                    //weights
-                    for (int weightIndex = 0; weightIndex < previousLayerLenght; weightIndex++)
-                    {
-                        double currentActivation = layers[layerIndex].neurons[neuronIndex].lastActivation;
 
-                        //
-                        switch (activation)
-                        {
-                            case ActivationFunctions.Relu:
-                                activationFunctionGradients[neuronIndex] = Derivatives.ReluDerivative(currentActivation);
-                                break;
+                    double linearFunctionGradient = layers[layerIndex - 1].neurons[weightIndex].lastActivation;
+                    //
+                    weightGradients[weightIndex] = Gradients.WeightGradient(
+                        currentNeuronGradient,
+                        activationFunctionGradients[neuronIndex],
+                        linearFunctionGradient
+                        );
 
-                            case ActivationFunctions.Sigmoid:
-                                activationFunctionGradients[neuronIndex] = Derivatives.SigmoidActivationDerivative(currentActivation);
-                                break;
-
-                            case ActivationFunctions.Tanh:
-                                activationFunctionGradients[neuronIndex] = Derivatives.TanhDerivative(currentActivation);
-                                break;
-
-                            default:
-                                throw new NotImplementedException();
-                        }
-                        double linearFunctionGradient = layers[layerIndex - 1].neurons[weightIndex].lastActivation;
-
-                        //
-                        weightGradients[weightIndex] = Gradients.WeightGradient(
-                            startingGradient,
+                    //
+                        previousLayerActivationGradients[weightIndex] += Gradients.ConnectedNeuronGradient(
+                            currentNeuronGradient,
                             activationFunctionGradients[neuronIndex],
-                            linearFunctionGradient
+                            layers[layerIndex].neurons[neuronIndex].weights[weightIndex]
                             );
 
-                        //
-
-                        if (new Random().NextDouble() < dropoutRate)
-                            previousLayerActivationsGradients[weightIndex] = 0;
-                        else
-                            previousLayerActivationsGradients[weightIndex] += Gradients.ConnectedNeuronGradient(
-                                startingGradient,
-                                activationFunctionGradients[neuronIndex],
-                                layers[layerIndex].neurons[neuronIndex].weights[weightIndex]
-                                );
-
-                        networkGradients[layerIndex].neurons[neuronIndex].weights[weightIndex] = weightGradients[weightIndex];
-                    }
-                    //
-                    biasGradients[neuronIndex] += Gradients.BiasGradient(startingGradient, activationFunctionGradients[neuronIndex]);
-                    networkGradients[layerIndex].bias = biasGradients[neuronIndex];
+                    output.neurons[neuronIndex].weights[weightIndex] = weightGradients[weightIndex];
                 }
+                //
+                biasGradients[neuronIndex] += Gradients.BiasGradient(currentNeuronGradient, activationFunctionGradients[neuronIndex]);
+                output.bias = biasGradients[neuronIndex];
             }
-            return networkGradients;
+
+            return output;
         }
 
-        public void ApplyGradients(List<LayerValues> gradients, double learningRate = 1.5)
+        internal void ApplyGradients(List<LayerValues> gradients, double learningRate = 1.5)
         {
             for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
-            {
                 for (int neuronIndex = 0; neuronIndex < layers[layerIndex].length; neuronIndex++)
                 {
                     Neuron currentNeuron = layers[layerIndex].neurons[neuronIndex];
                     for (int weightIndex = 0; weightIndex < currentNeuron.weights.Length; weightIndex++)
-                    {
                         layers[layerIndex].neurons[neuronIndex].weights[weightIndex]
                             -= gradients[layerIndex].neurons[neuronIndex].weights[weightIndex] * learningRate;
-                    }
                 }
-            }
         }
 
         public static class Derivatives
         {
+            public static double DerivativeOf(double neuronActivation, ActivationFunctions activation)
+            {
+                 return activation switch
+                 {
+                     ActivationFunctions.Relu => ReluDerivative(neuronActivation),
+                     ActivationFunctions.Sigmoid => SigmoidActivationDerivative(neuronActivation),
+                     ActivationFunctions.Tanh => TanhDerivative(neuronActivation),
+                     _ => throw new NotImplementedException(),
+                 };
+            }
+
+            public static double DerivativeOf(double neuronActivation, double expected, CostFunctions costFunction)
+            {
+                return costFunction switch
+                {
+                    CostFunctions.BinaryCrossEntropy => throw new NotImplementedException(),
+                    CostFunctions.SquaredMean => SquaredMeanErrorDerivative(neuronActivation, expected),
+                    _=> throw new NotImplementedException(), 
+                };
+            }
+
             public static double SquaredMeanErrorDerivative(double neuronOutput, double expectedOutput) => 2 * (neuronOutput - expectedOutput);
 
             //public static double BinaryCrossEntropyDerivative(double neuronOutput, double expectedOutput) =>  /
@@ -203,6 +219,49 @@ namespace NeuronalNetwork
 
             public static double BiasGradient(double costGradient, double activationFunctionGradient)
                 => costGradient * activationFunctionGradient;
+        }
+
+        public static class Cost
+        {
+            public static double GetCostOf(double[] output, double[] expected, CostFunctions costFunction)
+            {
+                return costFunction switch
+                {
+                    CostFunctions.BinaryCrossEntropy => BinaryCrossEntropyEmpiricalLoss(output, expected),
+                    CostFunctions.SquaredMean => SquaredMeanEmpiricalLoss(output, expected),
+                    _ => throw new NotImplementedException(),
+                };
+            }
+
+            public static double SquaredMeanEmpiricalLoss(double[] output, double[] expected)
+            {
+                if (output.Length != expected.Length)
+                    throw new Exception();
+                double sum = 0;
+                for (int i = 0; i < output.Length; i++)
+                {
+                    double currentCost = expected[i] - output[i];
+                    sum += currentCost * currentCost;
+                }
+                sum /= output.Length;
+
+                return sum;
+            }
+
+            /// <summary>
+            /// Used to train the network for boolean outputs
+            /// </summary>
+            public static double BinaryCrossEntropyEmpiricalLoss(double[] output, double[] expected)
+            {
+                if (output.Length != expected.Length)
+                    throw new Exception();
+                double sum = 0;
+                for (int i = 0; i < output.Length; i++)
+                    sum += 1 - expected[i] * Math.Log(1 - output[i]) + expected[i] * Math.Log(expected[i]);
+                sum /= output.Length;
+
+                return sum;
+            }
         }
 
         #endregion Training
