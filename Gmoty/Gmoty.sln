@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31423.177
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gmoty", "Gmoty.csproj", "{0F1744D2-2629-4811-90EA-3C0831FDBE2C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeuronalNetwork", "..\NeuronalNetwork\NeuronalNetwork.csproj", "{EF33662E-FA69-4F7B-B36A-6223DB2FD2A8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0F1744D2-2629-4811-90EA-3C0831FDBE2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F1744D2-2629-4811-90EA-3C0831FDBE2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F1744D2-2629-4811-90EA-3C0831FDBE2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F1744D2-2629-4811-90EA-3C0831FDBE2C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EF33662E-FA69-4F7B-B36A-6223DB2FD2A8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EF33662E-FA69-4F7B-B36A-6223DB2FD2A8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EF33662E-FA69-4F7B-B36A-6223DB2FD2A8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EF33662E-FA69-4F7B-B36A-6223DB2FD2A8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4CF6845B-598B-41AF-98CB-61777641A4D4}
+	EndGlobalSection
+EndGlobal
